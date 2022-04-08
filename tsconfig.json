@@ -4,6 +4,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "strict": false,
+    "lib": ["es2018"],
     "paths": {
       "@/*": ["./src/*"]
     }

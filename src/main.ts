@@ -10,10 +10,16 @@ import {effect,reactive} from "./reactive/main";
 //
 // app.mount('#app')
 
-const data = {ok:true,text:"hello,world"}
+let temp1,temp2;
+const data = {foo:true,bar:true}
 const obj = reactive(data);
+// @ts-ignore
 window.obj = obj;
-effect(function effectFn() {
-    console.log("1")
-    document.body.innerText = obj.ok?obj.text:"not";
+effect(function effectFn1() {
+    console.log("effectFn1")
+    effect(function effectFn2() {
+        console.log("effectFn2")
+        temp2 = obj.bar;
+    })
+    temp1 = obj.foo;
 })
