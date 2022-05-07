@@ -6,7 +6,7 @@
 </template>
 
 <script lang="ts">
-import {ref} from "vue";
+import {ref,watch} from "vue";
 import {addTodo} from "../stores/todos";
 export default {
   name: "AddNewTodo",

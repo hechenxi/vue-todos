@@ -49,7 +49,8 @@ export function reactive(data) {
     const obj = new Proxy(data, {
         get(target: any, key: string | symbol, receiver: any): any {
             track(target, key)
-            return target[key]
+            // return target[key]
+            return Reflect.get(target,key,receiver)
         },
         set(target: any, key: string | symbol, value: any, receiver: any): boolean {
             target[key] = value;
@@ -95,13 +96,14 @@ function trigger(target, key) {
     })
 }
 
-function computed(getter) {
+export function computed(getter) {
     let value;
-    let dirty = false;
-    const effectFn = effect(getter,{
-        lazy:true,
-        scheduler(){
+    let dirty = true;
+    const effectFn = effect(getter, {
+        lazy: true,
+        scheduler() {
             dirty = true;
+            trigger(obj, "value")
         }
     })
     const obj = {
@@ -110,12 +112,57 @@ function computed(getter) {
                 value = effectFn()
                 dirty = false;
             }
+            track(obj, "value")
             return value;
         }
     }
     return obj;
 }
 
-function watch(source,cb) {
-    effect()
+export function watch(source: Object | Function, cb) {
+    //手动实现函数重载
+    let getter;
+    if (typeof source === "function") {
+        getter = source;
+    } else {
+        getter = traverse(source)
+    }
+    _watch(getter, cb)
+
+    function traverse(value, seen = new Set()) {
+        if (typeof value !== "object" || value === null || seen.has(value)) return;
+        seen.add(value)
+        for (const valueKey in value) {
+            traverse(value[valueKey], seen)
+        }
+        return value;
+    }
+
+    //真正的watch函数
+    function _watch(getter: Function, cb: Function, options: {
+        immediate?: boolean,                //回调函数cb是否立即执行
+        flush?: "pre" | "post" | "sync"     //当监听到改变时，回调函数cb的执行时机
+    } = {}) {
+        let oldValue, newValue;
+        const job = () => {
+            newValue = effectFn()
+            cb(oldValue, newValue);
+            oldValue = newValue
+        }
+        const effectFn = effect(getter, {
+            lazy: true,
+            scheduler: () => {
+                if (options.flush === "post") {
+                    Promise.resolve().then(job)
+                } else {
+                    job()
+                }
+            }
+        })
+        if (options.immediate) {
+            job()
+        } else {
+            oldValue = effectFn()
+        }
+    }
 }
